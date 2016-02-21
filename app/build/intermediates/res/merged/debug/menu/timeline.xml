@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/mnuTweet"
+        android:orderInCategory="0"
+        android:title="@string/menu_tweet"
+        android:icon="@drawable/ic_tweet"
+        app:showAsAction="ifRoom" />
+</menu><!-- From: file:/Users/gpalem/study/Android/SimpleTwitter/app/src/main/res/menu/timeline.xml -->
