@@ -35,7 +35,7 @@
         android:layout_height="wrap_content"
         android:text="New Text"
         android:id="@+id/tvTimestamp"
-        android:textSize="10sp"
+        android:textSize="12sp"
         android:layout_alignBottom="@+id/tvUser"
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true" />

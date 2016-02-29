@@ -47,7 +47,7 @@ public abstract class TweetsFragment extends Fragment {
                 //Failure
                 @Override
                 public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                    Log.i(TAG, errorResponse.toString());
+                    client.networkFailHandler(throwable);
                 }
             };
 

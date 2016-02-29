@@ -1,6 +1,10 @@
 package com.codepath.apps.twitter.clients;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.support.v7.app.AlertDialog;
+import android.util.Log;
 
 import com.codepath.oauth.OAuthBaseClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
@@ -8,6 +12,8 @@ import com.loopj.android.http.RequestParams;
 
 import org.scribe.builder.api.Api;
 import org.scribe.builder.api.TwitterApi;
+
+import java.io.IOException;
 
 /*
  * 
@@ -28,8 +34,45 @@ public class TwitterClient extends OAuthBaseClient {
 	public static final String REST_CONSUMER_SECRET = "dwy1F07CFWCu2NV0MkZkjp0uf411LSWxpOl1VMhVGOSOHyO0CA"; // Change this
 	public static final String REST_CALLBACK_URL = "oauth://tweetsdisplayapp"; // Change this (here and in manifest)
 
+	private static Context context;
+	static AlertDialog networkFailDialog;
+
 	public TwitterClient(Context context) {
 		super(context, REST_API_CLASS, REST_URL, REST_CONSUMER_KEY, REST_CONSUMER_SECRET, REST_CALLBACK_URL);
+		this.context = context;
+
+		//Network fail dialog
+		networkFailDialog = new AlertDialog.Builder(context).setTitle("Network Error").setMessage("Unable to connect to Internet").create();
+	}
+
+	public Boolean isNetworkAvailable() {
+		ConnectivityManager connectivityManager
+				= (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+		return activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting();
+	}
+
+	public boolean isOnline() {
+		Runtime runtime = Runtime.getRuntime();
+		try {
+			Process ipProcess = runtime.exec("/system/bin/ping -c 1 8.8.8.8");
+			int     exitValue = ipProcess.waitFor();
+			return (exitValue == 0);
+		} catch (IOException e)          { e.printStackTrace(); }
+		catch (InterruptedException e) { e.printStackTrace(); }
+		return false;
+	}
+
+	public void networkFailHandler(Throwable throwable) {
+		try {
+			if (isNetworkAvailable() && isOnline()) {
+				throwable.printStackTrace();
+			}
+			else {
+				networkFailDialog.show();
+			}
+		}
+		catch (Exception e) {e.printStackTrace();}
 	}
 
 	//Get Timeline
@@ -105,6 +148,29 @@ public class TwitterClient extends OAuthBaseClient {
 		RequestParams params = new RequestParams();
 		params.put("status", body);
 		getClient().post(apiUrl, params, handler);
+	}
+
+	//Get Followers
+	public void getFollowers(String screeName, long cursor, AsyncHttpResponseHandler handler) {
+		String apiUrl = getApiUrl("followers/list.json");
+		Log.i("FOLLOWERS", screeName + " " + cursor);
+		//Specify params
+		RequestParams params = new RequestParams();
+		params.put("count", 25);
+		params.put("screen_name", screeName);
+		params.put("cursor", cursor);
+		getClient().get(apiUrl, params, handler);
+	}
+
+	//Get Following
+	public void getFollowing(String screeName, long cursor, AsyncHttpResponseHandler handler) {
+		String apiUrl = getApiUrl("friends/list.json");
+		//Specify params
+		RequestParams params = new RequestParams();
+		params.put("count", 25);
+		params.put("screen_name", screeName);
+		params.put("cursor", cursor);
+		getClient().get(apiUrl, params, handler);
 	}
 	//Compose Tweet
 	/* 1. Define the endpoint URL with getApiUrl and pass a relative path to the endpoint

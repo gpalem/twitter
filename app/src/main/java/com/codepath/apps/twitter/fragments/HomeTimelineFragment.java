@@ -48,8 +48,8 @@ public class HomeTimelineFragment extends TweetsFragment {
             }
 
             @Override
-            public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
-                Log.i(TAG, responseString);
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject response) {
+                client.networkFailHandler(throwable);
             }
         });
     }

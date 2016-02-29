@@ -13,8 +13,15 @@ import android.view.MenuItem;
 
 import com.astuetz.PagerSlidingTabStrip;
 import com.codepath.apps.twitter.R;
+import com.codepath.apps.twitter.clients.TwitterApplication;
+import com.codepath.apps.twitter.clients.TwitterClient;
 import com.codepath.apps.twitter.fragments.HomeTimelineFragment;
 import com.codepath.apps.twitter.fragments.MentionsTimelineFragment;
+import com.codepath.apps.twitter.models.User;
+import com.loopj.android.http.JsonHttpResponseHandler;
+
+import org.apache.http.Header;
+import org.json.JSONObject;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
@@ -22,21 +29,26 @@ import butterknife.ButterKnife;
 public class TimelineActivity extends AppCompatActivity {
 
     private static final String TAG = TimelineActivity.class.getSimpleName();
+    TwitterClient client;
 
     private final int TWEET_REQUEST_CODE = 1;
     private final int TWEET_RESPONSE_CODE = 1;
 
     @Bind(R.id.tabs) PagerSlidingTabStrip tabs;
     @Bind(R.id.viewpager) ViewPager viewPager;
+    private TweetsPagerAdapter tweetsPagerAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_timeline);
 
+        client = TwitterApplication.getRestClient();
+
         //Get viewpager, set adapter to viewpager, find sliding tabstrip and attach tabstrip
         ButterKnife.bind(this);
-        viewPager.setAdapter(new TweetsPagerAdapter(getSupportFragmentManager()));
+        tweetsPagerAdapter = new TweetsPagerAdapter(getSupportFragmentManager());
+        viewPager.setAdapter(tweetsPagerAdapter);
         tabs.setViewPager(viewPager);
     }
 
@@ -59,8 +71,20 @@ public class TimelineActivity extends AppCompatActivity {
         profileItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
-                Intent i = new Intent(TimelineActivity.this, ProfileActivity.class);
-                startActivity(i);
+                client.getCurrentUserInfo(new JsonHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                        User user = User.fromJSON(response);
+                        Intent i = new Intent(TimelineActivity.this, ProfileActivity.class);
+                        i.putExtra("screen_name", user.getScreenName());
+                        startActivity(i);
+                    }
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject response) {
+                        client.networkFailHandler(throwable);
+                    }
+                });
                 return true;
             }
         });
@@ -73,7 +97,8 @@ public class TimelineActivity extends AppCompatActivity {
         if (resultCode == TWEET_RESPONSE_CODE && requestCode == TWEET_REQUEST_CODE) {
             //Post and Get Updated Timeline
             String tweet = data.getExtras().getString("tweet");
-            //updateTweet(tweet);
+            HomeTimelineFragment homeTimelineFragment = (HomeTimelineFragment) tweetsPagerAdapter.getItem(0);
+            homeTimelineFragment.updateTweet(tweet);
         }
     }
 
@@ -81,6 +106,7 @@ public class TimelineActivity extends AppCompatActivity {
     public class TweetsPagerAdapter extends FragmentPagerAdapter {
         final int PAGE_COUNT = 2;
         private String tabTitles[] = {"Home", "@Mentions"};
+        private Fragment fragmentList[] = {null, null};
 
         public TweetsPagerAdapter(FragmentManager fm) {
             super(fm);
@@ -89,10 +115,14 @@ public class TimelineActivity extends AppCompatActivity {
         @Override
         public Fragment getItem(int position) {
             if (position == 0) {
-                return new HomeTimelineFragment();
+                if (fragmentList[0] == null)
+                    fragmentList[0] = new HomeTimelineFragment();
+                return fragmentList[0];
             }
             else {
-                return new MentionsTimelineFragment();
+                if (fragmentList[1] == null)
+                    fragmentList[1] = new MentionsTimelineFragment();
+                return fragmentList[1];
             }
         }
 
